@@ -1,5 +1,8 @@
+mod sedecim_file_info;
+mod ui;
+
 use std::{
-    io,
+    io::{self},
     sync::mpsc,
     thread,
     time::{Duration, Instant},
@@ -11,8 +14,6 @@ use tui::{
     Terminal,
 };
 
-use symbols::line;
-use tui::backend::Backend;
 use tui::layout::Alignment;
 use tui::style::{Color, Modifier, Style};
 use tui::text::{Span, Spans};
@@ -28,9 +29,6 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
-use std::env;
-use std::fs::File;
-use std::io::Read;
 
 enum Event<I> {
     Input(I),
@@ -50,12 +48,8 @@ impl App {
             return Ok(());
         }
 
-        const BUFFER_SIZE: usize = 256;
-        let file_name = String::from(&args[1]);
-        let mut file = File::open(&file_name)?;
-        let mut buffer = [0; BUFFER_SIZE];
-        let file_size = std::fs::metadata(&file_name)?.len();
-        let _ = file.by_ref().take(256).read(&mut buffer)?;
+        let mut file_info = sedecim_file_info::sedecim_file_info::new(String::from(&args[1]));
+        file_info.read_bytes();
 
         let (tx, rx) = mpsc::channel();
         let tick_rate = Duration::from_millis(200);
@@ -102,23 +96,18 @@ impl App {
                     // Vertical layout
                     let chunks = Layout::default()
                         .direction(Direction::Vertical)
-                        .constraints(
-                            [
-                                Constraint::Length(3),
-                                Constraint::Min(10)
-                            ]
-                            .as_ref(),
-                        )
+                        .constraints([Constraint::Length(3), Constraint::Min(10)].as_ref())
                         .split(size);
                     // Title
-                    let title = App::draw_title();
+                    let title = ui::draw_title();
+
                     f.render_widget(title, chunks[0]);
 
                     let byte_count: u64 = 10;
                     let mut lines: Vec<String> = vec![];
-                    let mut curr_byte = 0;
+                    let mut curr_byte = file_info.file_offset;
                     for i in 0..20 {
-                        if curr_byte > file_size {
+                        if curr_byte > file_info.file_size {
                             continue;
                         }
 
@@ -126,8 +115,8 @@ impl App {
                         let mut char_str = format!(" ");
                         for indx in 0..byte_count {
                             let ii = ((i * byte_count) + indx) as usize;
-                            curr_str.push_str(&format!("{:02x} ", buffer[ii]));
-                            char_str.push_str(&format!("{} ", buffer[ii] as char));
+                            curr_str.push_str(&format!("{:02x} ", file_info.buffer[ii]));
+                            char_str.push_str(&format!("{} ", file_info.buffer[ii] as char));
                         }
 
                         lines.push(format!("{} | {}", curr_str, char_str));
@@ -136,18 +125,16 @@ impl App {
 
                     let mut spans: Vec<Spans> = vec![];
                     for l in 0..lines.len() {
-                        let mut newSpan = Spans::from(Span::raw(&lines[l]));
+                        let new_span = Spans::from(Span::raw(&lines[l]));
 
-                        spans.push(newSpan);
+                        spans.push(new_span);
                     }
                     let para = Paragraph::new(spans).alignment(Alignment::Left).block(
                         Block::default()
-                            .title(format!(" {} ({}) ", &file_name, &file_size))
+                            .title(format!(" {} ({}) ", &file_info.file_name, &file_info.file_size))
                             .borders(Borders::ALL),
                     );
                     f.render_widget(para, chunks[1]);
-
-                   
                 })
                 .expect("Issues");
 
@@ -160,6 +147,20 @@ impl App {
                         break;
                     }
 
+                    KeyCode::Char('j') => {
+                        if file_info.file_offset >= 10 {
+                            file_info.file_offset -= 10;
+                            file_info.read_bytes();
+                        }
+                    }
+
+                    KeyCode::Char('k') => {
+                        if file_info.file_offset <= file_info.file_size - 10 {
+                            file_info.file_offset += 10;
+                            file_info.read_bytes();
+                        }
+                    }
+
                     _ => {}
                 },
                 Event::Tick => {}
@@ -168,18 +169,4 @@ impl App {
 
         Ok(())
     }
-
-    pub fn draw_title<'a>() -> Paragraph<'a> {
-        Paragraph::new("sedecim")
-            .style(Style::default().fg(Color::LightCyan))
-            .alignment(Alignment::Left)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .style(Style::default().fg(Color::White))
-                    .border_type(BorderType::Plain),
-            )
-    }
-
-   
 }

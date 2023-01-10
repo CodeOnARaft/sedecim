@@ -1,8 +1,9 @@
+mod events;
 mod sedecim_file_info;
 mod ui;
 
 use std::{
-    io::{self},
+    io::{self, Stdout},
     sync::mpsc,
     thread,
     time::{Duration, Instant},
@@ -24,55 +25,27 @@ use crossterm::{
     cursor::{
         DisableBlinking, EnableBlinking, MoveTo, RestorePosition, SavePosition, Show as ShowCursor,
     },
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event as CEvent, KeyCode},
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event as CEvent, KeyCode, KeyEvent},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
 
-enum Event<I> {
-    Input(I),
-    Tick,
+pub struct App {
+    events: events::SecdecimEvents,
+    pub file_info: sedecim_file_info::sedecim_file_info,
 }
 
-pub struct App {}
-
 impl App {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(args: Vec<String>) -> Self {
+        let events = events::SecdecimEvents::new();
+        let file_info = sedecim_file_info::sedecim_file_info::new(String::from(&args[1]));
+
+        Self { events, file_info }
     }
 
-    pub fn run(self, args: Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
-        if args.len() == 1 {
-            println!("You must pass a file name");
-            return Ok(());
-        }
-
-        let mut file_info = sedecim_file_info::sedecim_file_info::new(String::from(&args[1]));
-        file_info.read_bytes();
-
-        let (tx, rx) = mpsc::channel();
-        let tick_rate = Duration::from_millis(200);
-        thread::spawn(move || -> ! {
-            let mut last_tick = Instant::now();
-            loop {
-                let timeout = tick_rate
-                    .checked_sub(last_tick.elapsed())
-                    .unwrap_or_else(|| Duration::from_secs(0));
-
-                if event::poll(timeout).expect("poll works") {
-                    if let CEvent::Key(key) = event::read().expect("can read events") {
-                        tx.send(Event::Input(key)).expect("can send events");
-                    }
-                }
-
-                if last_tick.elapsed() >= tick_rate {
-                    if let Ok(_) = tx.send(Event::Tick) {
-                        last_tick = Instant::now();
-                    }
-                }
-            }
-        });
+    fn init(&mut self) -> Terminal<CrosstermBackend<Stdout>> {
+        self.file_info.read_bytes();
 
         // setup terminal
         let _ = enable_raw_mode();
@@ -85,8 +58,14 @@ impl App {
             EnableBlinking,
             MoveTo(10, 25)
         );
+        
         let backend = CrosstermBackend::new(stdout);
-        let mut terminal = Terminal::new(backend).expect("Errors");
+        Terminal::new(backend).expect("Errors")
+    }
+
+    pub fn run(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+
+       let mut terminal = self.init();       
 
         loop {
             terminal
@@ -105,9 +84,9 @@ impl App {
 
                     let byte_count: u64 = 10;
                     let mut lines: Vec<String> = vec![];
-                    let mut curr_byte = file_info.file_offset;
+                    let mut curr_byte = self.file_info.file_offset;
                     for i in 0..20 {
-                        if curr_byte > file_info.file_size {
+                        if curr_byte > self.file_info.file_size {
                             continue;
                         }
 
@@ -115,8 +94,8 @@ impl App {
                         let mut char_str = format!(" ");
                         for indx in 0..byte_count {
                             let ii = ((i * byte_count) + indx) as usize;
-                            curr_str.push_str(&format!("{:02x} ", file_info.buffer[ii]));
-                            char_str.push_str(&format!("{} ", file_info.buffer[ii] as char));
+                            curr_str.push_str(&format!("{:02x} ", self.file_info.buffer[ii]));
+                            char_str.push_str(&format!("{} ", self.file_info.buffer[ii] as char));
                         }
 
                         lines.push(format!("{} | {}", curr_str, char_str));
@@ -131,15 +110,18 @@ impl App {
                     }
                     let para = Paragraph::new(spans).alignment(Alignment::Left).block(
                         Block::default()
-                            .title(format!(" {} ({}) ", &file_info.file_name, &file_info.file_size))
+                            .title(format!(
+                                " {} ({}) ",
+                                &self.file_info.file_name, &self.file_info.file_size
+                            ))
                             .borders(Borders::ALL),
                     );
                     f.render_widget(para, chunks[1]);
                 })
                 .expect("Issues");
 
-            match rx.recv().unwrap() {
-                Event::Input(event) => match event.code {
+            match self.events.next() {
+                events::Event::Input(event) => match event.code {
                     KeyCode::Char('q') => {
                         let _ = disable_raw_mode();
                         terminal.show_cursor().expect("Errors");
@@ -147,23 +129,43 @@ impl App {
                         break;
                     }
 
-                    KeyCode::Char('j') => {
-                        if file_info.file_offset >= 10 {
-                            file_info.file_offset -= 10;
-                            file_info.read_bytes();
+                    KeyCode::Char('j') | KeyCode::Up => {
+                        if self.file_info.file_offset >= 10 {
+                            self.file_info.file_offset -= 10;
+                            self.file_info.read_bytes();
+                        } else {
+                            self.file_info.file_offset = 0;
                         }
                     }
 
-                    KeyCode::Char('k') => {
-                        if file_info.file_offset <= file_info.file_size - 10 {
-                            file_info.file_offset += 10;
-                            file_info.read_bytes();
+                    KeyCode::Char('k') | KeyCode::Down => {
+                        if self.file_info.file_offset <= self.file_info.file_size - 10 {
+                            self.file_info.file_offset += 10;
+                            self.file_info.read_bytes();
+                        }
+                    }
+
+                    KeyCode::PageUp => {
+                        if self.file_info.file_offset >= sedecim_file_info::BUFFER_SIZE_u64 {
+                            self.file_info.file_offset -= sedecim_file_info::BUFFER_SIZE_u64;
+                            self.file_info.read_bytes();
+                        } else {
+                            self.file_info.file_offset = 0;
+                        }
+                    }
+
+                    KeyCode::PageDown => {
+                        if self.file_info.file_offset
+                            <= self.file_info.file_size - sedecim_file_info::BUFFER_SIZE_u64
+                        {
+                            self.file_info.file_offset += sedecim_file_info::BUFFER_SIZE_u64;
+                            self.file_info.read_bytes();
                         }
                     }
 
                     _ => {}
                 },
-                Event::Tick => {}
+                events::Event::Tick => {}
             }
         }
 

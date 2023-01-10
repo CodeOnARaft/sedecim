@@ -1,4 +1,3 @@
-use std::env;
 use std::fs::File;
 use std::io::Read;
 use std::{
@@ -9,6 +8,7 @@ use std::{
 };
 
 pub const BUFFER_SIZE: usize = 256;
+pub const BUFFER_SIZE_u64 : u64 = 256;
 pub struct sedecim_file_info {
     pub buffer: [u8; BUFFER_SIZE],
     pub file_name: String,

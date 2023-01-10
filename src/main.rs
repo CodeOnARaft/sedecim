@@ -4,7 +4,13 @@ mod app;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    let app = app::App::new();
 
-   let _= app.run(args);
+    if args.len() == 1 {
+        println!("You must pass a file name");
+        return ;
+    }
+
+    let mut app = app::App::new(args);
+
+   let _= app.run();
 }

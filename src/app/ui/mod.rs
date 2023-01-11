@@ -7,15 +7,12 @@ use tui::{
     Terminal,
 };
 
-use symbols::line;
-use tui::backend::Backend;
 use tui::layout::Alignment;
 use tui::style::{Color, Modifier, Style};
 use tui::text::{Span, Spans};
 use tui::widgets::{BorderType, Cell, LineGauge, Paragraph, Row, Table};
 use tui::{symbols, Frame};
 
-use super::App;
 
 pub fn draw_ui(
     app: &mut super::App,
@@ -47,11 +44,22 @@ pub fn draw_ui(
                 let mut char_str = format!(" ");
                 for indx in 0..byte_count {
                     let ii = ((i * byte_count) + indx) as usize;
-                    curr_str.push_str(&format!("{:02x} ", app.file_info.buffer[ii]));
-                    if app.file_info.buffer[ii] >= 32 {
-                        char_str.push_str(&format!("{} ", app.file_info.buffer[ii] as char));
+
+                    if app.selected_line as u64 == i && app.selected_value as u64  == indx {
+                        curr_str.push_str(&format!("!|{:02x}!| ", app.file_info.buffer[ii]));
+
+                        if app.file_info.buffer[ii] >= 32 && app.file_info.buffer[ii].is_ascii() {
+                            char_str.push_str(&format!("!|{}!| ", app.file_info.buffer[ii] as char));
+                        } else {
+                            char_str.push_str("!|.!| ");
+                        }
                     } else {
-                        char_str.push_str(". ");
+                        curr_str.push_str(&format!("{:02x} ", app.file_info.buffer[ii]));
+                        if app.file_info.buffer[ii] >= 32  && app.file_info.buffer[ii].is_ascii() {
+                            char_str.push_str(&format!("{} ", app.file_info.buffer[ii] as char));
+                        } else {
+                            char_str.push_str(". ");
+                        }
                     }
                 }
 
@@ -62,32 +70,29 @@ pub fn draw_ui(
             let mut spans: Vec<Spans> = vec![];
             for l in 0..lines.len() {
                 if app.selected_line == (l as i32) {
-                    let split: usize = (app.selected_value * 3) as usize;
-                    let (first, next) = lines[l].split_at(9 + split);
-                    let (styled, rest) = next.split_at(2);
-
-                    let rest_length = rest.len() - (((9 - app.selected_value) * 2) as usize);
-                    let (left_char, rest_char) = rest.split_at(rest_length);
-                    let (styled_char, right_char) = rest_char.split_at(1);
+                    let str_split : Vec<&str> = lines[l].split("!|").collect();
 
                     let nsp = Spans::from(vec![
-                        Span::styled(first, Style::default().fg(Color::White)),
+                        Span::styled(str_split[0], Style::default().fg(Color::White)),
                         Span::styled(
-                            styled,
+                            str_split[1],
                             Style::default()
-                                .fg(Color::LightYellow)
-                                .add_modifier(Modifier::SLOW_BLINK)
-                                .add_modifier(Modifier::BOLD),
+                                .fg(Color::Yellow)
+                                .add_modifier(Modifier::RAPID_BLINK)
+                                .add_modifier(Modifier::BOLD)
+                                .add_modifier(Modifier::UNDERLINED),
                         ),
-                        Span::styled(left_char, Style::default().fg(Color::White)),
+                        Span::styled(str_split[2], Style::default().fg(Color::White)),
                         Span::styled(
-                            styled_char,
+                            str_split[3],
                             Style::default()
-                                .fg(Color::LightYellow)
-                                .add_modifier(Modifier::SLOW_BLINK)
-                                .add_modifier(Modifier::BOLD),
+                                .fg(Color::Yellow)
+                                .add_modifier(Modifier::RAPID_BLINK)
+                                .add_modifier(Modifier::BOLD)
+                                .add_modifier(Modifier::UNDERLINED)
+                                ,
                         ),
-                        Span::styled(right_char, Style::default().fg(Color::White)),
+                        Span::styled(str_split[4], Style::default().fg(Color::White)),
                     ]);
                     spans.push(nsp);
                 } else {

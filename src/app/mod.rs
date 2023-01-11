@@ -49,7 +49,7 @@ impl App {
         );
 
         let backend = CrosstermBackend::new(stdout);
-        Terminal::new(backend).expect("Errors")
+        Terminal::new(backend).expect("Error creating a new Terminal in App Init")
     }
 
     pub fn run(&mut self) {
@@ -60,7 +60,14 @@ impl App {
                 terminal.show_cursor().expect("Errors");
                 let _ = terminal.clear();
 
-                println!("Thank you for using secedim");
+               println!("\n\n");
+               println!("                _              _            ");
+               println!(" ___   ___   __| |  ___   ___ (_) _ __ ___  ");
+               println!("/ __| / _ \\ / _` | / _ \\ / __|| || '_ ` _ \\ ");
+               println!("\\__ \\|  __/| (_| ||  __/| (__ | || | | | | |");
+               println!("|___/ \\___| \\__,_| \\___| \\___||_||_| |_| |_|");
+                                                               
+                println!("\n\nThank you for using sedecim!\n\n");
             }
         }
     }

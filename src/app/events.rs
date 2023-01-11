@@ -1,18 +1,12 @@
 use std::{
-    io::{self},
     sync::{mpsc, mpsc::*},
     thread,
     time::{Duration, Instant},
 };
 
-use crossterm::{
-    cursor::{
-        DisableBlinking, EnableBlinking, MoveTo, RestorePosition, SavePosition, Show as ShowCursor,
-    },
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event as CEvent, KeyCode, KeyEvent},
-    execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
-    ExecutableCommand,
+use crossterm::{   
+    event::{self,  Event as CEvent,  KeyEvent},   
+ 
 };
 
 pub enum Event<I> {
@@ -37,6 +31,7 @@ impl SecdecimEvents {
 
                 if event::poll(timeout).expect("poll works") {
                     if let CEvent::Key(key) = event::read().expect("can read events") {
+
                         tx.send(Event::Input(key)).expect("can send events");
                     }
                 }

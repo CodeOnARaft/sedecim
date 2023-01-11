@@ -1,34 +1,31 @@
 use std::fs::File;
 use std::io::Read;
 use std::{
-    io::{self, Seek, SeekFrom},
-    sync::mpsc,
-    thread,
-    time::{Duration, Instant},
+    io::{ Seek, SeekFrom},
 };
 
 pub const BUFFER_SIZE: usize = 256;
-pub const page_size: u64 = 250;
+pub const PAGE_SIZE: u64 = 250;
 
-pub enum move_values {
-    up_line,
-    down_line,
-    up_page,
-    down_page,
+pub enum MoveValues {
+    UpLine,
+    DownLine,
+    UpPage,
+    DownPage,
 }
-pub struct sedecim_file_info {
+pub struct SedecimFileInfo {
     pub buffer: [u8; BUFFER_SIZE],
     pub file_name: String,
     pub file_offset: u64,
     pub file_size: u64,
 }
 
-impl sedecim_file_info {
-    pub fn new(file_name: String) -> sedecim_file_info {
-        let mut buffer: [u8; BUFFER_SIZE] = [0; BUFFER_SIZE];
-        let mut file_offset: u64 = 0;
+impl SedecimFileInfo {
+    pub fn new(file_name: String) -> SedecimFileInfo {
+        let buffer: [u8; BUFFER_SIZE] = [0; BUFFER_SIZE];
+        let file_offset: u64 = 0;
         let file_size: u64 = 0;
-        sedecim_file_info {
+        SedecimFileInfo {
             buffer,
             file_name,
             file_offset,
@@ -45,9 +42,9 @@ impl sedecim_file_info {
         let _ = read.take(256).read(&mut self.buffer).unwrap();
     }
 
-    pub fn scroll(&mut self, scroll_amount: move_values) {
+    pub fn scroll(&mut self, scroll_amount: MoveValues) {
         match scroll_amount {
-            move_values::up_line => {
+            MoveValues::UpLine => {
                 if self.file_offset >= 10 {
                     self.file_offset -= 10;
                     self.read_bytes();
@@ -56,25 +53,25 @@ impl sedecim_file_info {
                 }
             }
 
-            move_values::down_line => {
+            MoveValues::DownLine => {
                 if self.file_offset <= self.file_size - 10 {
                     self.file_offset += 10;
                     self.read_bytes();
                 }
             }
 
-            move_values::up_page => {
-                if self.file_offset >= page_size {
-                    self.file_offset -= page_size;
+            MoveValues::UpPage => {
+                if self.file_offset >= PAGE_SIZE {
+                    self.file_offset -= PAGE_SIZE;
                     self.read_bytes();
                 } else {
                     self.file_offset = 0;
                 }
             }
 
-            move_values::down_page => {
-                if self.file_offset <= self.file_size - page_size {
-                    self.file_offset += page_size;
+            MoveValues::DownPage => {
+                if self.file_offset <= self.file_size - PAGE_SIZE {
+                    self.file_offset += PAGE_SIZE;
                     self.read_bytes();
                 }
             }

@@ -7,14 +7,14 @@ use tui::{backend::CrosstermBackend, Terminal};
 
 use crossterm::{
     cursor::{EnableBlinking, MoveTo, Show as ShowCursor},
-    event::{EnableMouseCapture, KeyCode},
+    event::{EnableMouseCapture, KeyCode, KeyModifiers},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen},
 };
 
 pub struct App {
     events: events::SecdecimEvents,
-    pub file_info: sedecim_file_info::sedecim_file_info,
+    pub file_info: sedecim_file_info::SedecimFileInfo,
     pub selected_line: i32,
     pub selected_value: i32,
 }
@@ -22,7 +22,7 @@ pub struct App {
 impl App {
     pub fn new(args: Vec<String>) -> Self {
         let events = events::SecdecimEvents::new();
-        let file_info = sedecim_file_info::sedecim_file_info::new(String::from(&args[1]));
+        let file_info = sedecim_file_info::SedecimFileInfo::new(String::from(&args[1]));
         let selected_line = 0;
         let selected_value = 0;
         Self {
@@ -55,81 +55,98 @@ impl App {
     pub fn run(&mut self) {
         let mut terminal = self.init();
         match self.runner(&mut terminal) {
-            _ =>{
+            _ => {
                 let _ = disable_raw_mode();
                 terminal.show_cursor().expect("Errors");
                 let _ = terminal.clear();
 
-               println!("\n\n");
-               println!("                _              _            ");
-               println!(" ___   ___   __| |  ___   ___ (_) _ __ ___  ");
-               println!("/ __| / _ \\ / _` | / _ \\ / __|| || '_ ` _ \\ ");
-               println!("\\__ \\|  __/| (_| ||  __/| (__ | || | | | | |");
-               println!("|___/ \\___| \\__,_| \\___| \\___||_||_| |_| |_|");
-                                                               
+                println!("\n\n");
+                println!("                _              _            ");
+                println!(" ___   ___   __| |  ___   ___ (_) _ __ ___  ");
+                println!("/ __| / _ \\ / _` | / _ \\ / __|| || '_ ` _ \\ ");
+                println!("\\__ \\|  __/| (_| ||  __/| (__ | || | | | | |");
+                println!("|___/ \\___| \\__,_| \\___| \\___||_||_| |_| |_|");
+
                 println!("\n\nThank you for using sedecim!\n\n");
             }
         }
     }
 
-    fn runner(&mut self,terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<(), Box<dyn std::error::Error>> {        
-
+    fn runner(
+        &mut self,
+        terminal: &mut Terminal<CrosstermBackend<Stdout>>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         loop {
             let _ = ui::draw_ui(self, terminal);
 
-            match self.events.next() {
-                events::Event::Input(event) => match event.code {
-                    KeyCode::Char('q') => {                       
-                        break;
-                    }
-
-                    KeyCode::Up => {
-                        self.selected_line -= 1;
-                        if self.selected_line <= 0 {
-                            self.selected_line = 0;
-                            self.file_info
-                                .scroll(sedecim_file_info::move_values::up_line);
-                        }
-                    }
-
-                    KeyCode::Down => {
-                        self.selected_line += 1;
-                        if self.selected_line >= 19 {
-                            self.selected_line = 19;
-                            self.file_info
-                                .scroll(sedecim_file_info::move_values::down_line);
-                        }
-                    }
-
-                    KeyCode::Right => {
-                        self.selected_value += 1;
-                        if self.selected_value > 9 {
-                            self.selected_value = 0;
-                        }
-                    }
-
-                    KeyCode::Left => {
-                        self.selected_value -= 1;
-                        if self.selected_value < 0 {
-                            self.selected_value = 9;
-                        }
-                    }
-                    KeyCode::PageUp => {
-                        self.file_info
-                            .scroll(sedecim_file_info::move_values::up_page);
-                    }
-
-                    KeyCode::PageDown => {
-                        self.file_info
-                            .scroll(sedecim_file_info::move_values::down_page);
-                    }
-
-                    _ => {}
-                },
-                events::Event::Tick => {}
+            if self.handle_input() {
+                break;
             }
         }
 
         Ok(())
+    }
+
+    fn handle_input(&mut self) -> bool {
+        match self.events.next() {
+            events::Event::Input(event) => match event.code {
+                KeyCode::Char('g') => match event.modifiers {
+                    KeyModifiers::CONTROL => {
+                        return true;
+                    }
+                    _ => {}
+                },
+
+                KeyCode::Char('q') => {
+                    return true;
+                }
+
+                KeyCode::Up => {
+                    self.selected_line -= 1;
+                    if self.selected_line <= 0 {
+                        self.selected_line = 0;
+                        self.file_info
+                            .scroll(sedecim_file_info::MoveValues::UpLine);
+                    }
+                }
+
+                KeyCode::Down => {
+                    self.selected_line += 1;
+                    if self.selected_line >= 19 {
+                        self.selected_line = 19;
+                        self.file_info
+                            .scroll(sedecim_file_info::MoveValues::DownLine);
+                    }
+                }
+
+                KeyCode::Right => {
+                    self.selected_value += 1;
+                    if self.selected_value > 9 {
+                        self.selected_value = 0;
+                    }
+                }
+
+                KeyCode::Left => {
+                    self.selected_value -= 1;
+                    if self.selected_value < 0 {
+                        self.selected_value = 9;
+                    }
+                }
+                KeyCode::PageUp => {
+                    self.file_info
+                        .scroll(sedecim_file_info::MoveValues::UpPage);
+                }
+
+                KeyCode::PageDown => {
+                    self.file_info
+                        .scroll(sedecim_file_info::MoveValues::DownPage);
+                }
+
+                _ => {}
+            },
+            events::Event::Tick => {}
+        }
+
+        return false;
     }
 }

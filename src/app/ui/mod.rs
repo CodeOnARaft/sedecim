@@ -2,17 +2,15 @@ use std::io::Stdout;
 
 use tui::{
     backend::CrosstermBackend,
-    layout::{Constraint, Direction, Layout, Rect},
-    widgets::{Block, Borders, Widget},
+    layout::{Constraint, Direction, Layout},
+    widgets::{Block, Borders},
     Terminal,
 };
 
 use tui::layout::Alignment;
 use tui::style::{Color, Modifier, Style};
 use tui::text::{Span, Spans};
-use tui::widgets::{BorderType, Cell, LineGauge, Paragraph, Row, Table};
-use tui::{symbols, Frame};
-
+use tui::widgets::{BorderType , Paragraph};
 
 pub fn draw_ui(
     app: &mut super::App,

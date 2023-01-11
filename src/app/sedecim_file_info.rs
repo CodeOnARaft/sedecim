@@ -8,7 +8,14 @@ use std::{
 };
 
 pub const BUFFER_SIZE: usize = 256;
-pub const BUFFER_SIZE_u64 : u64 = 256;
+pub const page_size: u64 = 250;
+
+pub enum move_values {
+    up_line,
+    down_line,
+    up_page,
+    down_page,
+}
 pub struct sedecim_file_info {
     pub buffer: [u8; BUFFER_SIZE],
     pub file_name: String,
@@ -36,5 +43,41 @@ impl sedecim_file_info {
         let read = file.by_ref();
         let _ = read.seek(SeekFrom::Start(self.file_offset)).unwrap();
         let _ = read.take(256).read(&mut self.buffer).unwrap();
+    }
+
+    pub fn scroll(&mut self, scroll_amount: move_values) {
+        match scroll_amount {
+            move_values::up_line => {
+                if self.file_offset >= 10 {
+                    self.file_offset -= 10;
+                    self.read_bytes();
+                } else {
+                    self.file_offset = 0;
+                }
+            }
+
+            move_values::down_line => {
+                if self.file_offset <= self.file_size - 10 {
+                    self.file_offset += 10;
+                    self.read_bytes();
+                }
+            }
+
+            move_values::up_page => {
+                if self.file_offset >= page_size {
+                    self.file_offset -= page_size;
+                    self.read_bytes();
+                } else {
+                    self.file_offset = 0;
+                }
+            }
+
+            move_values::down_page => {
+                if self.file_offset <= self.file_size - page_size {
+                    self.file_offset += page_size;
+                    self.read_bytes();
+                }
+            }
+        };
     }
 }

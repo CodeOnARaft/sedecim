@@ -7,10 +7,10 @@ fn main() {
 
     if args.len() == 1 {
         println!("You must pass a file name");
-        return ;
+        return;
     }
 
     let mut app = app::App::new(args);
 
-   let _= app.run();
+    app.run();
 }

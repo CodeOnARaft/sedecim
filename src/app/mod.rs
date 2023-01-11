@@ -2,46 +2,35 @@ mod events;
 mod sedecim_file_info;
 mod ui;
 
-use std::{
-    io::{self, Stdout},
-    sync::mpsc,
-    thread,
-    time::{Duration, Instant},
-};
-use tui::{
-    backend::CrosstermBackend,
-    layout::{Constraint, Direction, Layout, Rect},
-    widgets::{Block, Borders, Widget},
-    Terminal,
-};
-
-use tui::layout::Alignment;
-use tui::style::{Color, Modifier, Style};
-use tui::text::{Span, Spans};
-use tui::widgets::{BorderType, Cell, LineGauge, Paragraph, Row, Table};
-use tui::{symbols, Frame};
+use std::io::{self, Stdout};
+use tui::{backend::CrosstermBackend, Terminal};
 
 use crossterm::{
-    cursor::{
-        DisableBlinking, EnableBlinking, MoveTo, RestorePosition, SavePosition, Show as ShowCursor,
-    },
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event as CEvent, KeyCode, KeyEvent},
+    cursor::{EnableBlinking, MoveTo, Show as ShowCursor},
+    event::{EnableMouseCapture, KeyCode},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
-    ExecutableCommand,
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen},
 };
 
 pub struct App {
     events: events::SecdecimEvents,
     pub file_info: sedecim_file_info::sedecim_file_info,
+    pub selected_line: i32,
+    pub selected_value: i32,
 }
 
 impl App {
     pub fn new(args: Vec<String>) -> Self {
         let events = events::SecdecimEvents::new();
         let file_info = sedecim_file_info::sedecim_file_info::new(String::from(&args[1]));
-
-        Self { events, file_info }
+        let selected_line = 0;
+        let selected_value = 0;
+        Self {
+            events,
+            file_info,
+            selected_line,
+            selected_value,
+        }
     }
 
     fn init(&mut self) -> Terminal<CrosstermBackend<Stdout>> {
@@ -58,109 +47,74 @@ impl App {
             EnableBlinking,
             MoveTo(10, 25)
         );
-        
+
         let backend = CrosstermBackend::new(stdout);
         Terminal::new(backend).expect("Errors")
     }
 
-    pub fn run(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn run(&mut self) {
+        let mut terminal = self.init();
+        match self.runner(&mut terminal) {
+            _ =>{
+                let _ = disable_raw_mode();
+                terminal.show_cursor().expect("Errors");
+                let _ = terminal.clear();
 
-       let mut terminal = self.init();       
+                println!("Thank you for using secedim");
+            }
+        }
+    }
+
+    fn runner(&mut self,terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<(), Box<dyn std::error::Error>> {        
 
         loop {
-            terminal
-                .draw(|f| {
-                    let size = f.size();
-
-                    // Vertical layout
-                    let chunks = Layout::default()
-                        .direction(Direction::Vertical)
-                        .constraints([Constraint::Length(3), Constraint::Min(10)].as_ref())
-                        .split(size);
-                    // Title
-                    let title = ui::draw_title();
-
-                    f.render_widget(title, chunks[0]);
-
-                    let byte_count: u64 = 10;
-                    let mut lines: Vec<String> = vec![];
-                    let mut curr_byte = self.file_info.file_offset;
-                    for i in 0..20 {
-                        if curr_byte > self.file_info.file_size {
-                            continue;
-                        }
-
-                        let mut curr_str = format!(" {:06x}  ", curr_byte);
-                        let mut char_str = format!(" ");
-                        for indx in 0..byte_count {
-                            let ii = ((i * byte_count) + indx) as usize;
-                            curr_str.push_str(&format!("{:02x} ", self.file_info.buffer[ii]));
-                            char_str.push_str(&format!("{} ", self.file_info.buffer[ii] as char));
-                        }
-
-                        lines.push(format!("{} | {}", curr_str, char_str));
-                        curr_byte += byte_count;
-                    }
-
-                    let mut spans: Vec<Spans> = vec![];
-                    for l in 0..lines.len() {
-                        let new_span = Spans::from(Span::raw(&lines[l]));
-
-                        spans.push(new_span);
-                    }
-                    let para = Paragraph::new(spans).alignment(Alignment::Left).block(
-                        Block::default()
-                            .title(format!(
-                                " {} ({}) ",
-                                &self.file_info.file_name, &self.file_info.file_size
-                            ))
-                            .borders(Borders::ALL),
-                    );
-                    f.render_widget(para, chunks[1]);
-                })
-                .expect("Issues");
+            let _ = ui::draw_ui(self, terminal);
 
             match self.events.next() {
                 events::Event::Input(event) => match event.code {
-                    KeyCode::Char('q') => {
-                        let _ = disable_raw_mode();
-                        terminal.show_cursor().expect("Errors");
-                        let _ = terminal.clear();
+                    KeyCode::Char('q') => {                       
                         break;
                     }
 
-                    KeyCode::Char('j') | KeyCode::Up => {
-                        if self.file_info.file_offset >= 10 {
-                            self.file_info.file_offset -= 10;
-                            self.file_info.read_bytes();
-                        } else {
-                            self.file_info.file_offset = 0;
+                    KeyCode::Up => {
+                        self.selected_line -= 1;
+                        if self.selected_line <= 0 {
+                            self.selected_line = 0;
+                            self.file_info
+                                .scroll(sedecim_file_info::move_values::up_line);
                         }
                     }
 
-                    KeyCode::Char('k') | KeyCode::Down => {
-                        if self.file_info.file_offset <= self.file_info.file_size - 10 {
-                            self.file_info.file_offset += 10;
-                            self.file_info.read_bytes();
+                    KeyCode::Down => {
+                        self.selected_line += 1;
+                        if self.selected_line >= 19 {
+                            self.selected_line = 19;
+                            self.file_info
+                                .scroll(sedecim_file_info::move_values::down_line);
                         }
                     }
 
+                    KeyCode::Right => {
+                        self.selected_value += 1;
+                        if self.selected_value > 9 {
+                            self.selected_value = 0;
+                        }
+                    }
+
+                    KeyCode::Left => {
+                        self.selected_value -= 1;
+                        if self.selected_value < 0 {
+                            self.selected_value = 9;
+                        }
+                    }
                     KeyCode::PageUp => {
-                        if self.file_info.file_offset >= sedecim_file_info::BUFFER_SIZE_u64 {
-                            self.file_info.file_offset -= sedecim_file_info::BUFFER_SIZE_u64;
-                            self.file_info.read_bytes();
-                        } else {
-                            self.file_info.file_offset = 0;
-                        }
+                        self.file_info
+                            .scroll(sedecim_file_info::move_values::up_page);
                     }
 
                     KeyCode::PageDown => {
-                        if self.file_info.file_offset
-                            <= self.file_info.file_size - sedecim_file_info::BUFFER_SIZE_u64
-                        {
-                            self.file_info.file_offset += sedecim_file_info::BUFFER_SIZE_u64;
-                            self.file_info.read_bytes();
-                        }
+                        self.file_info
+                            .scroll(sedecim_file_info::move_values::down_page);
                     }
 
                     _ => {}

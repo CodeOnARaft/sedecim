@@ -10,7 +10,9 @@ use tui::{
 use tui::layout::Alignment;
 use tui::style::{Color, Modifier, Style};
 use tui::text::{Span, Spans};
-use tui::widgets::{BorderType , Paragraph};
+use tui::widgets::{BorderType, Paragraph};
+
+use super::AppMode;
 
 pub fn draw_ui(
     app: &mut super::App,
@@ -42,21 +44,46 @@ pub fn draw_ui(
                 let mut char_str = format!(" ");
                 for indx in 0..byte_count {
                     let ii = ((i * byte_count) + indx) as usize;
+                    match app.mode {
+                        AppMode::Editing | AppMode::Standard => {
+                            if app.selected_line as u64 == i && app.selected_value as u64 == indx {
+                                curr_str
+                                    .push_str(&format!("!|{:02x}!| ", app.file_info.buffer[ii]));
 
-                    if app.selected_line as u64 == i && app.selected_value as u64  == indx {
-                        curr_str.push_str(&format!("!|{:02x}!| ", app.file_info.buffer[ii]));
-
-                        if app.file_info.buffer[ii] >= 32 && app.file_info.buffer[ii].is_ascii() {
-                            char_str.push_str(&format!("!|{}!| ", app.file_info.buffer[ii] as char));
-                        } else {
-                            char_str.push_str("!|.!| ");
+                                if app.file_info.buffer[ii] >= 32
+                                    && app.file_info.buffer[ii].is_ascii()
+                                {
+                                    char_str.push_str(&format!(
+                                        "!|{}!| ",
+                                        app.file_info.buffer[ii] as char
+                                    ));
+                                } else {
+                                    char_str.push_str("!|.!| ");
+                                }
+                            } else {
+                                curr_str.push_str(&format!("{:02x} ", app.file_info.buffer[ii]));
+                                if app.file_info.buffer[ii] >= 32
+                                    && app.file_info.buffer[ii].is_ascii()
+                                {
+                                    char_str.push_str(&format!(
+                                        "{} ",
+                                        app.file_info.buffer[ii] as char
+                                    ));
+                                } else {
+                                    char_str.push_str(". ");
+                                }
+                            }
                         }
-                    } else {
-                        curr_str.push_str(&format!("{:02x} ", app.file_info.buffer[ii]));
-                        if app.file_info.buffer[ii] >= 32  && app.file_info.buffer[ii].is_ascii() {
-                            char_str.push_str(&format!("{} ", app.file_info.buffer[ii] as char));
-                        } else {
-                            char_str.push_str(". ");
+
+                        _ => {
+                            curr_str.push_str(&format!("{:02x} ", app.file_info.buffer[ii]));
+                            if app.file_info.buffer[ii] >= 32 && app.file_info.buffer[ii].is_ascii()
+                            {
+                                char_str
+                                    .push_str(&format!("{} ", app.file_info.buffer[ii] as char));
+                            } else {
+                                char_str.push_str(". ");
+                            }
                         }
                     }
                 }
@@ -68,36 +95,64 @@ pub fn draw_ui(
             let mut spans: Vec<Spans> = vec![];
             for l in 0..lines.len() {
                 if app.selected_line == (l as i32) {
-                    let str_split : Vec<&str> = lines[l].split("!|").collect();
+                    match app.mode {
+                        AppMode::Standard | AppMode::Editing => {
+                            let str_split: Vec<&str> = lines[l].split("!|").collect();
 
-                    let nsp = Spans::from(vec![
-                        Span::styled(str_split[0], Style::default().fg(Color::White)),
-                        Span::styled(
-                            str_split[1],
-                            Style::default()
-                                .fg(Color::Yellow)
-                                .add_modifier(Modifier::RAPID_BLINK)
-                                .add_modifier(Modifier::BOLD)
-                                .add_modifier(Modifier::UNDERLINED),
-                        ),
-                        Span::styled(str_split[2], Style::default().fg(Color::White)),
-                        Span::styled(
-                            str_split[3],
-                            Style::default()
-                                .fg(Color::Yellow)
-                                .add_modifier(Modifier::RAPID_BLINK)
-                                .add_modifier(Modifier::BOLD)
-                                .add_modifier(Modifier::UNDERLINED)
-                                ,
-                        ),
-                        Span::styled(str_split[4], Style::default().fg(Color::White)),
-                    ]);
-                    spans.push(nsp);
+                            let nsp = Spans::from(vec![
+                                Span::styled(str_split[0], Style::default().fg(Color::White)),
+                                Span::styled(
+                                    str_split[1],
+                                    Style::default()
+                                        .fg(Color::Yellow)
+                                        .add_modifier(Modifier::RAPID_BLINK)
+                                        .add_modifier(Modifier::BOLD)
+                                        .add_modifier(Modifier::UNDERLINED),
+                                ),
+                                Span::styled(str_split[2], Style::default().fg(Color::White)),
+                                Span::styled(
+                                    str_split[3],
+                                    Style::default()
+                                        .fg(Color::Yellow)
+                                        .add_modifier(Modifier::RAPID_BLINK)
+                                        .add_modifier(Modifier::BOLD)
+                                        .add_modifier(Modifier::UNDERLINED),
+                                ),
+                                Span::styled(str_split[4], Style::default().fg(Color::White)),
+                            ]);
+                            spans.push(nsp);
+                        }
+
+                        AppMode::Jump => {
+                            let new_span = Spans::from(Span::raw(&lines[l]));
+                            spans.push(new_span);
+                        }
+                    }
                 } else {
                     let new_span = Spans::from(Span::raw(&lines[l]));
                     spans.push(new_span);
                 }
             }
+
+            match app.mode {
+                AppMode::Jump => {
+                    spans.push(Spans::from(Span::raw("".to_owned())));
+                    let newspns = Spans::from(vec![
+                        Span::styled("Jump to Address (HEX): ", Style::default().fg(Color::White)),
+                        Span::styled(
+                            " ",
+                            Style::default()
+                                .add_modifier(Modifier::RAPID_BLINK)
+                                .add_modifier(Modifier::UNDERLINED),
+                        ),
+                    ]);
+
+                    spans.push(newspns);
+                }
+
+                _ => {}
+            }
+
             let para = Paragraph::new(spans).alignment(Alignment::Left).block(
                 Block::default()
                     .title(format!(

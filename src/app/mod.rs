@@ -12,11 +12,18 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen},
 };
 
+pub enum AppMode {
+    Standard,
+    Jump,
+    Editing,
+}
+
 pub struct App {
     events: events::SecdecimEvents,
     pub file_info: sedecim_file_info::SedecimFileInfo,
     pub selected_line: i32,
     pub selected_value: i32,
+    pub mode: AppMode,
 }
 
 impl App {
@@ -25,11 +32,13 @@ impl App {
         let file_info = sedecim_file_info::SedecimFileInfo::new(String::from(&args[1]));
         let selected_line = 0;
         let selected_value = 0;
+        let mode = AppMode::Standard;
         Self {
             events,
             file_info,
             selected_line,
             selected_value,
+            mode,
         }
     }
 
@@ -92,7 +101,7 @@ impl App {
             events::Event::Input(event) => match event.code {
                 KeyCode::Char('g') => match event.modifiers {
                     KeyModifiers::CONTROL => {
-                        return true;
+                        self.mode = AppMode::Jump;
                     }
                     _ => {}
                 },
@@ -105,8 +114,7 @@ impl App {
                     self.selected_line -= 1;
                     if self.selected_line <= 0 {
                         self.selected_line = 0;
-                        self.file_info
-                            .scroll(sedecim_file_info::MoveValues::UpLine);
+                        self.file_info.scroll(sedecim_file_info::MoveValues::UpLine);
                     }
                 }
 
@@ -133,14 +141,22 @@ impl App {
                     }
                 }
                 KeyCode::PageUp => {
-                    self.file_info
-                        .scroll(sedecim_file_info::MoveValues::UpPage);
+                    self.file_info.scroll(sedecim_file_info::MoveValues::UpPage);
                 }
 
                 KeyCode::PageDown => {
                     self.file_info
                         .scroll(sedecim_file_info::MoveValues::DownPage);
                 }
+
+                KeyCode::Esc => {
+                    match self.mode {
+                        AppMode::Jump =>{
+                            self.mode = AppMode::Standard;
+                        }
+                        _ =>{}
+                    }
+                },
 
                 _ => {}
             },

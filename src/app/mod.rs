@@ -2,7 +2,10 @@ mod events;
 mod sedecim_file_info;
 mod ui;
 
-use std::io::{self, Stdout};
+use std::{
+    io::{self, Stdout},
+    str::FromStr,
+};
 use tui::{backend::CrosstermBackend, Terminal};
 
 use crossterm::{
@@ -24,6 +27,8 @@ pub struct App {
     pub selected_line: i32,
     pub selected_value: i32,
     pub mode: AppMode,
+    pub jump_value: String,
+    pub error: String,
 }
 
 impl App {
@@ -33,12 +38,16 @@ impl App {
         let selected_line = 0;
         let selected_value = 0;
         let mode = AppMode::Standard;
+        let jump_value: String = String::default();
+        let error: String = String::default();
         Self {
             events,
             file_info,
             selected_line,
             selected_value,
             mode,
+            jump_value,
+            error,
         }
     }
 
@@ -97,11 +106,23 @@ impl App {
     }
 
     fn handle_input(&mut self) -> bool {
+        let mut quit = false;
+        match self.mode {
+            AppMode::Standard => quit = self.handle_input_standard(),
+            AppMode::Jump => self.handle_input_jump(),
+            _ => {}
+        }
+
+        return quit;
+    }
+
+    fn handle_input_standard(&mut self) -> bool {
         match self.events.next() {
             events::Event::Input(event) => match event.code {
                 KeyCode::Char('g') => match event.modifiers {
                     KeyModifiers::CONTROL => {
                         self.mode = AppMode::Jump;
+                        self.jump_value = String::default();
                     }
                     _ => {}
                 },
@@ -149,13 +170,11 @@ impl App {
                         .scroll(sedecim_file_info::MoveValues::DownPage);
                 }
 
-                KeyCode::Esc => {
-                    match self.mode {
-                        AppMode::Jump =>{
-                            self.mode = AppMode::Standard;
-                        }
-                        _ =>{}
+                KeyCode::Esc => match self.mode {
+                    AppMode::Jump => {
+                        self.mode = AppMode::Standard;
                     }
+                    _ => {}
                 },
 
                 _ => {}
@@ -163,6 +182,53 @@ impl App {
             events::Event::Tick => {}
         }
 
-        return false;
+        false
+    }
+
+    fn handle_input_jump(&mut self) {
+        match self.events.next() {
+            events::Event::Input(event) => match event.code {
+                KeyCode::Esc => self.mode = AppMode::Standard,
+
+                KeyCode::Char('0') => self.jump_value.push('0'),
+                KeyCode::Char('1') => self.jump_value.push('1'),
+                KeyCode::Char('2') => self.jump_value.push('2'),
+                KeyCode::Char('3') => self.jump_value.push('3'),
+                KeyCode::Char('4') => self.jump_value.push('4'),
+                KeyCode::Char('5') => self.jump_value.push('5'),
+                KeyCode::Char('6') => self.jump_value.push('6'),
+                KeyCode::Char('7') => self.jump_value.push('7'),
+                KeyCode::Char('8') => self.jump_value.push('8'),
+                KeyCode::Char('9') => self.jump_value.push('9'),
+                KeyCode::Char('a') => self.jump_value.push('a'),
+                KeyCode::Char('b') => self.jump_value.push('b'),
+                KeyCode::Char('c') => self.jump_value.push('c'),
+                KeyCode::Char('d') => self.jump_value.push('d'),
+                KeyCode::Char('e') => self.jump_value.push('e'),
+                KeyCode::Char('f') => self.jump_value.push('f'),
+
+                KeyCode::Backspace => {
+                    let _ = self.jump_value.pop();
+                }
+
+                KeyCode::Enter => {
+                    let address = i64::from_str_radix(&self.jump_value, 16).unwrap_or(-1);
+                    let max_address = self.file_info.file_size as i64;
+
+                    if address >= 0 && address <= max_address {
+                        let offset = address % 10;
+                        let address = address - offset;
+                        self.file_info.file_offset = address as u64;
+                        self.selected_value = offset as i32;
+                        self.selected_line = 0;
+                        self.file_info.read_bytes();
+                        self.mode = AppMode::Standard;    
+                    }
+                }
+                _ => {}
+            },
+
+            events::Event::Tick => {}
+        }
     }
 }

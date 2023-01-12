@@ -136,9 +136,10 @@ pub fn draw_ui(
 
             match app.mode {
                 AppMode::Jump => {
+                    let s = format!("Jump to Address (HEX): {}",app.jump_value);
                     spans.push(Spans::from(Span::raw("".to_owned())));
                     let newspns = Spans::from(vec![
-                        Span::styled("Jump to Address (HEX): ", Style::default().fg(Color::White)),
+                        Span::styled(s, Style::default().fg(Color::White)),
                         Span::styled(
                             " ",
                             Style::default()
@@ -156,8 +157,8 @@ pub fn draw_ui(
             let para = Paragraph::new(spans).alignment(Alignment::Left).block(
                 Block::default()
                     .title(format!(
-                        " {} ({}) ",
-                        &app.file_info.file_name, &app.file_info.file_size
+                        " {} ({}, {:06x}) ",
+                        &app.file_info.file_name, &app.file_info.file_size, &app.file_info.file_size
                     ))
                     .borders(Borders::ALL),
             );

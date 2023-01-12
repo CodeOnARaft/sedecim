@@ -4,7 +4,6 @@ mod ui;
 
 use std::{
     io::{self, Stdout},
-    str::FromStr,
 };
 use tui::{backend::CrosstermBackend, Terminal};
 
@@ -18,7 +17,6 @@ use crossterm::{
 pub enum AppMode {
     Standard,
     Jump,
-    Editing,
 }
 
 pub struct App {

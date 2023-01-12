@@ -45,7 +45,7 @@ pub fn draw_ui(
                 for indx in 0..byte_count {
                     let ii = ((i * byte_count) + indx) as usize;
                     match app.mode {
-                        AppMode::Editing | AppMode::Standard => {
+                        AppMode::Standard => {
                             if app.selected_line as u64 == i && app.selected_value as u64 == indx {
                                 curr_str
                                     .push_str(&format!("!|{:02x}!| ", app.file_info.buffer[ii]));
@@ -96,7 +96,7 @@ pub fn draw_ui(
             for l in 0..lines.len() {
                 if app.selected_line == (l as i32) {
                     match app.mode {
-                        AppMode::Standard | AppMode::Editing => {
+                        AppMode::Standard => {
                             let str_split: Vec<&str> = lines[l].split("!|").collect();
 
                             let nsp = Spans::from(vec![

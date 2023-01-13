@@ -188,23 +188,17 @@ impl App {
             events::Event::Input(event) => match event.code {
                 KeyCode::Esc => self.mode = AppMode::Standard,
 
-                KeyCode::Char('0') => self.jump_value.push('0'),
-                KeyCode::Char('1') => self.jump_value.push('1'),
-                KeyCode::Char('2') => self.jump_value.push('2'),
-                KeyCode::Char('3') => self.jump_value.push('3'),
-                KeyCode::Char('4') => self.jump_value.push('4'),
-                KeyCode::Char('5') => self.jump_value.push('5'),
-                KeyCode::Char('6') => self.jump_value.push('6'),
-                KeyCode::Char('7') => self.jump_value.push('7'),
-                KeyCode::Char('8') => self.jump_value.push('8'),
-                KeyCode::Char('9') => self.jump_value.push('9'),
-                KeyCode::Char('a') => self.jump_value.push('a'),
-                KeyCode::Char('b') => self.jump_value.push('b'),
-                KeyCode::Char('c') => self.jump_value.push('c'),
-                KeyCode::Char('d') => self.jump_value.push('d'),
-                KeyCode::Char('e') => self.jump_value.push('e'),
-                KeyCode::Char('f') => self.jump_value.push('f'),
+                KeyCode::Char(chr) =>{
+                    match "0123456789abcdef".chars().position(|c| c == chr) {
+                        Some(_) => {
+                            self.jump_value.push(chr);
+                        }
+                        None =>{}
+                    }
 
+                    
+                }
+                
                 KeyCode::Backspace => {
                     let _ = self.jump_value.pop();
                 }

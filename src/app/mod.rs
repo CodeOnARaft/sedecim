@@ -107,8 +107,7 @@ impl App {
         let mut quit = false;
         match self.mode {
             AppMode::Standard => quit = self.handle_input_standard(),
-            AppMode::Jump => self.handle_input_jump(),
-            _ => {}
+            AppMode::Jump => self.handle_input_jump(),            
         }
 
         return quit;

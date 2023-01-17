@@ -191,6 +191,7 @@ impl App {
                     match "0123456789abcdef".chars().position(|c| c == chr) {
                         Some(_) => {
                             self.jump_value.push(chr);
+                            self.error = "".to_owned();
                         }
                         None =>{}
                     }
@@ -200,6 +201,7 @@ impl App {
                 
                 KeyCode::Backspace => {
                     let _ = self.jump_value.pop();
+                    self.error = "".to_owned();
                 }
 
                 KeyCode::Enter => {
@@ -214,6 +216,10 @@ impl App {
                         self.selected_line = 0;
                         self.file_info.read_bytes();
                         self.mode = AppMode::Standard;    
+                        self.error = "".to_owned();
+                    }
+                    else {
+                        self.error = "Invalid Address.".to_owned();
                     }
                 }
                 _ => {}

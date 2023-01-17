@@ -120,7 +120,7 @@ pub fn draw_ui(
                 AppMode::Jump => {
                     let s = format!("Jump to Address (HEX): {}", app.jump_value);
                     spans.push(Spans::from(Span::raw("".to_owned())));
-                    let newspns = Spans::from(vec![
+                    let mut newspns = Spans::from(vec![
                         Span::styled(s, Style::default().fg(Color::White)),
                         Span::styled(
                             " ",
@@ -130,6 +130,11 @@ pub fn draw_ui(
                         ),
                     ]);
 
+                    spans.push(newspns);
+
+                    newspns = Spans::from(vec![
+                        Span::styled(app.error.clone(), Style::default().fg(Color::Red)),                       
+                    ]);
                     spans.push(newspns);
                 }
 

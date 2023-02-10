@@ -6,7 +6,7 @@ CLI Hex Reader in Rust
 ## Commands to Run
 * git clone https://github.com/CodeOnARaft/sedecim.git
 * cd sedecim
-* cargo run <filename>
+* cargo run *filename*
 
 ## Controls
 

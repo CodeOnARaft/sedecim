@@ -1,2 +1,22 @@
 # sedecim
-CLI Hex Editor in Rust
+CLI Hex Reader in Rust
+
+![](images/screenshot.png)
+
+## Commands to Run
+* git clone https://github.com/CodeOnARaft/sedecim.git
+* cd sedecim
+* cargo run <filename>
+
+## Controls
+
+|Key |Use  |
+--- | --- |
+| Arrow Keys | Move Cursor |
+| Page Up/Page Down | Move Up/Move Down Page |
+| q | Quit/Exit |
+| ctrl+g | Jump to address |
+
+### TODO
+* Optimize the loading of bytes to pages instead of lines.
+* Make this a hex editor and not just a reader

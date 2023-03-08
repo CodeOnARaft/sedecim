@@ -1,8 +1,6 @@
 use std::fs::File;
 use std::io::Read;
-use std::{
-    io::{ Seek, SeekFrom},
-};
+use std::io::{Seek, SeekFrom};
 
 pub const BUFFER_SIZE: usize = 256;
 pub const PAGE_SIZE: u64 = 250;
@@ -77,6 +75,4 @@ impl SedecimFileInfo {
             }
         };
     }
-
-   
 }

@@ -2,9 +2,7 @@ mod events;
 mod sedecim_file_info;
 mod ui;
 
-use std::{
-    io::{self, Stdout},
-};
+use std::io::{self, Stdout};
 use tui::{backend::CrosstermBackend, Terminal};
 
 use crossterm::{
@@ -104,13 +102,10 @@ impl App {
     }
 
     fn handle_input(&mut self) -> bool {
-        let mut quit = false;
         match self.mode {
-            AppMode::Standard => quit = self.handle_input_standard(),
-            AppMode::Jump => self.handle_input_jump(),            
+            AppMode::Standard => self.handle_input_standard(),
+            AppMode::Jump => self.handle_input_jump(),
         }
-
-        return quit;
     }
 
     fn handle_input_standard(&mut self) -> bool {
@@ -182,23 +177,19 @@ impl App {
         false
     }
 
-    fn handle_input_jump(&mut self) {
+    fn handle_input_jump(&mut self) -> bool {
         match self.events.next() {
             events::Event::Input(event) => match event.code {
                 KeyCode::Esc => self.mode = AppMode::Standard,
 
-                KeyCode::Char(chr) =>{
-                    match "0123456789abcdef".chars().position(|c| c == chr) {
-                        Some(_) => {
-                            self.jump_value.push(chr);
-                            self.error = "".to_owned();
-                        }
-                        None =>{}
+                KeyCode::Char(chr) => match "0123456789abcdef".chars().position(|c| c == chr) {
+                    Some(_) => {
+                        self.jump_value.push(chr);
+                        self.error = "".to_owned();
                     }
+                    None => {}
+                },
 
-                    
-                }
-                
                 KeyCode::Backspace => {
                     let _ = self.jump_value.pop();
                     self.error = "".to_owned();
@@ -215,10 +206,9 @@ impl App {
                         self.selected_value = offset as i32;
                         self.selected_line = 0;
                         self.file_info.read_bytes();
-                        self.mode = AppMode::Standard;    
+                        self.mode = AppMode::Standard;
                         self.error = "".to_owned();
-                    }
-                    else {
+                    } else {
                         self.error = "Invalid Address.".to_owned();
                     }
                 }
@@ -227,5 +217,7 @@ impl App {
 
             events::Event::Tick => {}
         }
+
+        false
     }
 }

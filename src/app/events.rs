@@ -4,10 +4,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crossterm::{   
-    event::{self,  Event as CEvent,  KeyEvent},   
- 
-};
+use crossterm::event::{self, Event as CEvent, KeyEvent};
 
 pub enum Event<I> {
     Input(I),
@@ -15,7 +12,7 @@ pub enum Event<I> {
 }
 
 pub struct SecdecimEvents {
-   rx: Receiver<Event<KeyEvent>>,
+    rx: Receiver<Event<KeyEvent>>,
 }
 
 impl SecdecimEvents {
@@ -31,7 +28,6 @@ impl SecdecimEvents {
 
                 if event::poll(timeout).expect("poll works") {
                     if let CEvent::Key(key) = event::read().expect("can read events") {
-
                         tx.send(Event::Input(key)).expect("can send events");
                     }
                 }
@@ -47,6 +43,6 @@ impl SecdecimEvents {
     }
 
     pub fn next(&self) -> Event<KeyEvent> {
-        return  self.rx.recv().unwrap_or(Event::Tick);
+        return self.rx.recv().unwrap_or(Event::Tick);
     }
 }

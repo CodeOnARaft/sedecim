@@ -15,7 +15,7 @@ fn main() {
     app.run();
 }
 
-fn show_help(){
+fn show_help() {
     println!("\n\n");
     println!("                _              _            ");
     println!(" ___   ___   __| |  ___   ___ (_) _ __ ___  ");
@@ -26,6 +26,4 @@ fn show_help(){
     println!("File Name is Required!\n");
     println!("sedecim <File Name>");
     println!("Example: sedecim research.txt");
-    
-    
 }

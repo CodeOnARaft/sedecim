@@ -132,9 +132,10 @@ pub fn draw_ui(
 
                     spans.push(newspns);
 
-                    newspns = Spans::from(vec![
-                        Span::styled(app.error.clone(), Style::default().fg(Color::Red)),                       
-                    ]);
+                    newspns = Spans::from(vec![Span::styled(
+                        app.error.clone(),
+                        Style::default().fg(Color::Red),
+                    )]);
                     spans.push(newspns);
                 }
 

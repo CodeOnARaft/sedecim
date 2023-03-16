@@ -1,5 +1,6 @@
 mod events;
 mod sedecim_file_info;
+mod sedecim_file_page;
 mod ui;
 
 use std::io::{self, Stdout};
@@ -48,7 +49,7 @@ impl App {
     }
 
     fn init(&mut self) -> Terminal<CrosstermBackend<Stdout>> {
-        self.file_info.read_bytes();
+        self.file_info.set_address(0);
 
         // setup terminal
         let _ = enable_raw_mode();
@@ -202,12 +203,13 @@ impl App {
                     if address >= 0 && address <= max_address {
                         let offset = address % 10;
                         let address = address - offset;
-                        self.file_info.file_offset = address as u64;
+
                         self.selected_value = offset as i32;
                         self.selected_line = 0;
-                        self.file_info.read_bytes();
                         self.mode = AppMode::Standard;
                         self.error = "".to_owned();
+
+                        self.file_info.set_address(address as u64);
                     } else {
                         self.error = "Invalid Address.".to_owned();
                     }

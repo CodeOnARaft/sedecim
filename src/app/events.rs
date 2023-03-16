@@ -20,23 +20,17 @@ impl SecdecimEvents {
         let (tx, rx) = mpsc::channel();
         let tick_rate = Duration::from_millis(200);
         thread::spawn(move || -> ! {
-            let mut last_tick = Instant::now();
+            let last_tick = Instant::now();
             loop {
                 let timeout = tick_rate
                     .checked_sub(last_tick.elapsed())
                     .unwrap_or_else(|| Duration::from_secs(0));
 
-                if event::poll(timeout).expect("poll works") {
-                    if let CEvent::Key(key) = event::read().expect("can read events") {
-                        tx.send(Event::Input(key)).expect("can send events");
+                if event::poll(timeout).expect("Polling event has failed!") {
+                    if let CEvent::Key(key) = event::read().expect("Unable to read the event!") {
+                        tx.send(Event::Input(key)).expect("Unable to send the event!");
                     }
-                }
-
-                if last_tick.elapsed() >= tick_rate {
-                    if let Ok(_) = tx.send(Event::Tick) {
-                        last_tick = Instant::now();
-                    }
-                }
+                }                
             }
         });
         SecdecimEvents { rx }

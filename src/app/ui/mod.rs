@@ -12,7 +12,7 @@ use tui::style::{Color, Modifier, Style};
 use tui::text::{Span, Spans};
 use tui::widgets::{BorderType, Paragraph};
 
-use super::AppMode;
+use super::{AppMode, sedecim_file_page::SedecimFilePage};
 
 pub fn draw_ui(
     app: &mut super::App,
@@ -35,39 +35,42 @@ pub fn draw_ui(
             let byte_count: u64 = 10;
             let mut lines: Vec<String> = vec![];
             let mut curr_byte = app.file_info.file_offset;
+            let mut page = app.file_info.get_page(curr_byte);
+            let mut page_line = (curr_byte - page.page_start) / byte_count;
             for i in 0..20 {
                 if curr_byte > app.file_info.file_size {
                     continue;
                 }
 
+                let page_number = SedecimFilePage::get_page(curr_byte);
+                if page.page_id != page_number {
+                    page = app.file_info.get_page(curr_byte);
+                    page_line = 0;
+                }
+                
+
                 let mut curr_str = format!(" {:06x}  ", curr_byte);
                 let mut char_str = format!(" ");
                 for indx in 0..byte_count {
-                    let ii = ((i * byte_count) + indx) as usize;
+                    let ii = ((page_line * byte_count) + indx)   as usize;                    
                     match app.mode {
                         AppMode::Standard
                             if app.selected_line as u64 == i
                                 && app.selected_value as u64 == indx =>
                         {
-                            curr_str.push_str(&format!("!|{:02x}!| ", app.file_info.buffer[ii]));
+                            curr_str.push_str(&format!("!|{:02x}!| ", page.buffer[ii]));
 
-                            if app.file_info.buffer[ii] >= 32 && app.file_info.buffer[ii].is_ascii()
-                            {
-                                char_str.push_str(&format!(
-                                    "!|{}!| ",
-                                    app.file_info.buffer[ii] as char
-                                ));
+                            if page.buffer[ii] >= 32 && page.buffer[ii].is_ascii() {
+                                char_str.push_str(&format!("!|{}!| ", page.buffer[ii] as char));
                             } else {
                                 char_str.push_str("!|.!| ");
                             }
                         }
 
                         _ => {
-                            curr_str.push_str(&format!("{:02x} ", app.file_info.buffer[ii]));
-                            if app.file_info.buffer[ii] >= 32 && app.file_info.buffer[ii].is_ascii()
-                            {
-                                char_str
-                                    .push_str(&format!("{} ", app.file_info.buffer[ii] as char));
+                            curr_str.push_str(&format!("{:02x} ", page.buffer[ii]));
+                            if page.buffer[ii] >= 32 && page.buffer[ii].is_ascii() {
+                                char_str.push_str(&format!("{} ", page.buffer[ii] as char));
                             } else {
                                 char_str.push_str(". ");
                             }
@@ -75,6 +78,7 @@ pub fn draw_ui(
                     }
                 }
 
+                page_line += 1;
                 lines.push(format!("{} | {}", curr_str, char_str));
                 curr_byte += byte_count;
             }

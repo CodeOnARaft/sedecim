@@ -18,5 +18,4 @@ CLI Hex Reader in Rust
 | ctrl+g | Jump to address |
 
 ### TODO
-* Optimize the loading of bytes to pages instead of lines.
 * Make this a hex editor and not just a reader

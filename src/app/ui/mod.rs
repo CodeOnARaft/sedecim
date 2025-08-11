@@ -10,9 +10,13 @@ use tui::{
 use tui::layout::Alignment;
 use tui::style::{Color, Modifier, Style};
 use tui::text::{Span, Spans};
-use tui::widgets::{BorderType, Paragraph};
+use tui::widgets::Paragraph;
 
-use super::{AppMode, sedecim_file_page::SedecimFilePage};
+use super::{
+    AppMode,
+    sedecim_file_info::LINE_SIZE,
+    sedecim_file_page::SedecimFilePage,
+};
 
 pub fn draw_ui(
     app: &mut super::App,
@@ -22,17 +26,21 @@ pub fn draw_ui(
         .draw(|f| {
             let size = f.size();
 
-            // Vertical layout
+            // Outer border with title
+            let block = Block::default()
+                .title("sedecim")
+                .borders(Borders::ALL);
+            f.render_widget(block.clone(), size);
+
+            let inner = block.inner(size);
+
+            // Layout inside border: main content and status bar
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
-                .constraints([Constraint::Length(3), Constraint::Min(10)].as_ref())
-                .split(size);
-            // Title
-            let title = draw_title();
+                .constraints([Constraint::Min(1), Constraint::Length(1)].as_ref())
+                .split(inner);
 
-            f.render_widget(title, chunks[0]);
-
-            let byte_count: u64 = 10;
+            let byte_count: u64 = LINE_SIZE;
             let mut lines: Vec<String> = vec![];
             let mut curr_byte = app.file_info.file_offset;
             let mut page = app.file_info.get_page(curr_byte);
@@ -146,31 +154,22 @@ pub fn draw_ui(
                 _ => {}
             }
 
-            let para = Paragraph::new(spans).alignment(Alignment::Left).block(
-                Block::default()
-                    .title(format!(
-                        " {} ({}, {:06x}) ",
-                        &app.file_info.file_name,
-                        &app.file_info.file_size,
-                        &app.file_info.file_size
-                    ))
-                    .borders(Borders::ALL),
+            let para = Paragraph::new(spans).alignment(Alignment::Left);
+            f.render_widget(para, chunks[0]);
+
+            let cursor_offset = app.file_info.file_offset
+                + (app.selected_line as u64) * byte_count
+                + (app.selected_value as u64);
+            let status_text = format!(
+                "{} | {} bytes | cursor {:06x}",
+                &app.file_info.file_name,
+                &app.file_info.file_size,
+                cursor_offset
             );
-            f.render_widget(para, chunks[1]);
+            let status = Paragraph::new(status_text).alignment(Alignment::Left);
+            f.render_widget(status, chunks[1]);
         })
         .expect("Issues");
 
     Ok(())
-}
-
-pub fn draw_title<'a>() -> Paragraph<'a> {
-    Paragraph::new("sedecim")
-        .style(Style::default().fg(Color::LightCyan))
-        .alignment(Alignment::Left)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .style(Style::default().fg(Color::White))
-                .border_type(BorderType::Plain),
-        )
 }

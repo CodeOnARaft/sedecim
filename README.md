@@ -16,6 +16,7 @@ CLI Hex Reader in Rust
 | Page Up/Page Down | Move Up/Move Down Page |
 | q | Quit/Exit |
 | ctrl+g | Jump to address |
+| h | Help |
 
 ### TODO
 * Make this a hex editor and not just a reader

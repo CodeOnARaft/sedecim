@@ -2,15 +2,12 @@ use std::io::Stdout;
 
 use tui::{
     backend::CrosstermBackend,
-    layout::{Constraint, Direction, Layout},
-    widgets::{Block, Borders},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    style::{Color, Modifier, Style},
+    text::{Span, Spans},
+    widgets::{Block, Borders, Clear, Paragraph},
     Terminal,
 };
-
-use tui::layout::Alignment;
-use tui::style::{Color, Modifier, Style};
-use tui::text::{Span, Spans};
-use tui::widgets::Paragraph;
 
 use super::{
     AppMode,
@@ -161,15 +158,61 @@ pub fn draw_ui(
                 + (app.selected_line as u64) * byte_count
                 + (app.selected_value as u64);
             let status_text = format!(
-                "{} | {} bytes | cursor {:06x}",
+                "{} | {} bytes | cursor {:06x} | h - help",
                 &app.file_info.file_name,
                 &app.file_info.file_size,
                 cursor_offset
             );
             let status = Paragraph::new(status_text).alignment(Alignment::Left);
             f.render_widget(status, chunks[1]);
+
+            if matches!(app.mode, AppMode::Help) {
+                let help_lines = vec![
+                    Spans::from("| Key               | Use                     |"),
+                    Spans::from("|-------------------|-------------------------|"),
+                    Spans::from("| Arrow Keys        | Move Cursor             |"),
+                    Spans::from("| Page Up/Page Down | Move Up/Move Down Page  |"),
+                    Spans::from("| q                 | Quit/Exit               |"),
+                    Spans::from("| ctrl+g            | Jump to address         |"),
+                    Spans::from("| h                 | Help                    |"),
+                ];
+                let help = Paragraph::new(help_lines)
+                    .block(Block::default().title("Help").borders(Borders::ALL))
+                    .alignment(Alignment::Left);
+                let area = centered_rect(60, 40, size);
+                f.render_widget(Clear, area);
+                f.render_widget(help, area);
+            }
         })
         .expect("Issues");
 
     Ok(())
+}
+
+fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
+    let vertical = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(
+            [
+                Constraint::Percentage((100 - percent_y) / 2),
+                Constraint::Percentage(percent_y),
+                Constraint::Percentage((100 - percent_y) / 2),
+            ]
+            .as_ref(),
+        )
+        .split(r);
+
+    let horizontal = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints(
+            [
+                Constraint::Percentage((100 - percent_x) / 2),
+                Constraint::Percentage(percent_x),
+                Constraint::Percentage((100 - percent_x) / 2),
+            ]
+            .as_ref(),
+        )
+        .split(vertical[1]);
+
+    horizontal[1]
 }

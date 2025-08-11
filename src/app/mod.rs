@@ -16,6 +16,7 @@ use crossterm::{
 pub enum AppMode {
     Standard,
     Jump,
+    Help,
 }
 
 pub struct App {
@@ -114,6 +115,7 @@ impl App {
         match self.mode {
             AppMode::Standard => self.handle_input_standard(),
             AppMode::Jump => self.handle_input_jump(),
+            AppMode::Help => self.handle_input_help(),
         }
     }
 
@@ -126,6 +128,10 @@ impl App {
                         self.jump_value = String::default();
                     }
                     _ => {}
+                },
+
+                KeyCode::Char('h') => {
+                    self.mode = AppMode::Help;
                 },
 
                 KeyCode::Char('q') => {
@@ -228,6 +234,16 @@ impl App {
             events::Event::Tick => {}
         }
 
+        false
+    }
+
+    fn handle_input_help(&mut self) -> bool {
+        match self.events.next() {
+            events::Event::Input(_) => {
+                self.mode = AppMode::Standard;
+            }
+            events::Event::Tick => {}
+        }
         false
     }
 }

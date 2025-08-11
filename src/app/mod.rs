@@ -8,9 +8,9 @@ use tui::{backend::CrosstermBackend, Terminal};
 
 use crossterm::{
     cursor::{EnableBlinking, MoveTo, Show as ShowCursor},
-    event::{EnableMouseCapture, KeyCode, KeyModifiers},
+    event::{DisableMouseCapture, EnableMouseCapture, KeyCode, KeyModifiers},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen},
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 
 pub enum AppMode {
@@ -64,7 +64,10 @@ impl App {
         );
 
         let backend = CrosstermBackend::new(stdout);
-        Terminal::new(backend).expect("Error creating a new Terminal in App Init")
+        let mut terminal =
+            Terminal::new(backend).expect("Error creating a new Terminal in App Init");
+        let _ = terminal.clear();
+        terminal
     }
 
     pub fn run(&mut self) {
@@ -72,6 +75,11 @@ impl App {
         match self.runner(&mut terminal) {
             _ => {
                 let _ = disable_raw_mode();
+                let _ = execute!(
+                    terminal.backend_mut(),
+                    LeaveAlternateScreen,
+                    DisableMouseCapture
+                );
                 terminal.show_cursor().expect("Errors");
                 let _ = terminal.clear();
 
